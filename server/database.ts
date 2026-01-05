@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dbPath = path.join(__dirname, '..', 'anisuplayer.db');
-const db = new Database(dbPath);
+const db: InstanceType<typeof Database> = new Database(dbPath);
 
 export function initializeDatabase() {
   // Videos table

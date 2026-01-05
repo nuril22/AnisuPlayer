@@ -534,7 +534,15 @@ pm2 restart anisuplayer
 
 - **"crypto.hash is not a function"**:
   - This error occurs when Node.js version is incompatible with Vite 7.3+
-  - **Solution:** Upgrade to Node.js 20.19+ or 22.12+ (see above)
+  - **Solution 1 (Recommended):** Upgrade to Node.js 20.19+ or 22.12+ (see above)
+  - **Solution 2 (Alternative):** If you cannot upgrade Node.js, downgrade Vite to 5.x:
+    ```bash
+    cd /var/www/AnisuPlayer
+    sudo npm install vite@^5.4.11 --save-dev
+    sudo npm install
+    sudo npm run build
+    ```
+    Note: Vite 5.x supports Node.js 18.x, but we still recommend upgrading to Node.js 20+ for better compatibility.
 
 ## 📖 Usage
 
