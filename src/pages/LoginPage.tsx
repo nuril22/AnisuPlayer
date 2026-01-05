@@ -25,15 +25,35 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password })
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        // Try to parse error message
+        try {
+          const errorData = await response.json();
+          setError(errorData.error || `Login failed: ${response.status} ${response.statusText}`);
+        } catch {
+          setError(`Login failed: ${response.status} ${response.statusText}`);
+        }
+        return;
+      }
+
       const data = await response.json();
 
-      if (response.ok) {
+      if (data.success || response.ok) {
         navigate('/dashboard');
       } else {
         setError(data.error || 'Login failed');
       }
     } catch (err) {
-      setError('Connection error. Please try again.');
+      // More detailed error message
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Cannot connect to server. Please check if the backend is running.');
+      } else if (err instanceof SyntaxError) {
+        setError('Invalid response from server. Please check backend configuration.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Connection error. Please try again.');
+      }
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }

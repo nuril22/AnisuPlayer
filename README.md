@@ -437,7 +437,7 @@ server {
         }
     }
 
-    # Backend API
+    # Backend API - MUST be before /cdn to catch API requests
     location /api {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
@@ -447,9 +447,23 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Access-Control-Allow-Origin *;
+        proxy_set_header Access-Control-Allow-Credentials true;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 300s;
         proxy_connect_timeout 300s;
+        
+        # Handle CORS preflight
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS';
+            add_header Access-Control-Allow-Headers 'Content-Type, Authorization';
+            add_header Access-Control-Allow-Credentials true;
+            add_header Access-Control-Max-Age 1728000;
+            add_header Content-Type 'text/plain; charset=utf-8';
+            add_header Content-Length 0;
+            return 204;
+        }
     }
 
     # CDN Route - React Router handles /cdn/:id pages
@@ -695,6 +709,21 @@ echo "AnisuPlayer has been uninstalled."
 - Verify backend is running: `pm2 status`
 - Check backend logs: `pm2 logs anisuplayer`
 - Verify proxy_pass URL in Nginx config
+- Check if port 3001 is listening: `sudo netstat -tulpn | grep 3001`
+- Restart backend: `pm2 restart anisuplayer`
+
+**"Connection error" on login:**
+- **Check if backend is running:** `pm2 status` and `pm2 logs anisuplayer`
+- **Verify Nginx is proxying correctly:** Check browser DevTools Network tab for `/api/auth/login` request
+- **Check CORS configuration:** Ensure Nginx has `Access-Control-Allow-Origin *` header
+- **Verify environment variables:** Check `.env` file has correct `ADMIN_USERNAME` and `ADMIN_PASSWORD`
+- **Test backend directly:** `curl http://localhost:3001/api/health` (should return `{"status":"ok"}`)
+- **Check Nginx error logs:** `sudo tail -f /var/log/nginx/error.log`
+- **Restart services:**
+  ```bash
+  pm2 restart anisuplayer
+  sudo systemctl restart nginx
+  ```
 
 **Permission Issues:**
 - Check storage directory permissions: `ls -la storage`

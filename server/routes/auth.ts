@@ -41,9 +41,15 @@ router.post('/login', async (req: Request, res: Response) => {
     );
 
     // Set cookie
+    // In production behind Nginx, secure should be false if not using HTTPS
+    // Or set to true if using HTTPS/SSL
+    const isSecure = process.env.NODE_ENV === 'production' && 
+                     (req.headers['x-forwarded-proto'] === 'https' || 
+                      req.secure);
+    
     res.cookie('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
