@@ -41,9 +41,15 @@ A modern, feature-rich video player with multi-resolution support, built with Re
 
 ### Prerequisites
 
-- **Node.js** 18.x or higher
+- **Node.js** 18.x or higher (required - TypeScript 5.9 needs Node.js 14+, but 18+ recommended)
 - **npm** or **yarn**
 - **FFmpeg** (required for video encoding - local development only)
+
+**⚠️ Important:** Make sure your Node.js version is 18.x or higher. You can check with:
+```bash
+node --version
+```
+If you see a version lower than v18.0.0, please upgrade Node.js before proceeding.
 
 ### Installation
 
@@ -183,9 +189,20 @@ ssh username@your-vps-ip
 # Update system packages
 sudo apt update && sudo apt upgrade -y
 
-# Install Node.js 18.x
+# Remove old Node.js if exists (optional)
+sudo apt remove nodejs npm -y 2>/dev/null || true
+
+# Install Node.js 18.x (LTS)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
+
+# Verify Node.js version (should be 18.x or higher)
+node --version
+npm --version
+
+# If version is still old, try alternative installation method:
+# curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# sudo apt install -y nodejs
 
 # Install FFmpeg
 sudo apt install -y ffmpeg
@@ -197,6 +214,8 @@ sudo npm install -g pm2
 sudo apt install -y nginx
 ```
 
+**⚠️ Important:** Make sure Node.js version is **18.x or higher**. TypeScript 5.9 requires Node.js 14+, but we recommend 18+ for better compatibility.
+
 ### Step 3: Clone and Setup Project
 
 ```bash
@@ -207,13 +226,36 @@ cd /var/www
 sudo git clone https://github.com/nuril22/AnisuPlayer.git
 cd AnisuPlayer
 
+# Verify Node.js version before proceeding
+node --version
+# Should show v18.x.x or higher
+
+# If version is incorrect, check Node.js installation:
+# which node
+# /usr/bin/node --version
+
 # Install dependencies
 sudo npm install
+
+# Verify TypeScript can run
+npx tsc --version
 
 # Build the project
 sudo npm run build
 sudo npm run build:server
 ```
+
+**Troubleshooting Build Issues:**
+
+If you encounter `SyntaxError: Unexpected token '?'`:
+1. **Check Node.js version:** `node --version` (must be 18.x or higher)
+2. **Reinstall Node.js 18+** using the commands in Step 2
+3. **Clear npm cache:** `sudo npm cache clean --force`
+4. **Remove node_modules and reinstall:**
+   ```bash
+   sudo rm -rf node_modules package-lock.json
+   sudo npm install
+   ```
 
 ### Step 4: Configure Environment Variables
 
@@ -464,6 +506,23 @@ pm2 restart anisuplayer
 **SSL Certificate Issues:**
 - Renew certificate: `sudo certbot renew`
 - Check certificate status: `sudo certbot certificates`
+
+**Build errors (SyntaxError: Unexpected token '?'):**
+- **This means Node.js version is too old!**
+- Check version: `node --version` (must be 18.x or higher)
+- Reinstall Node.js 18+:
+  ```bash
+  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+  sudo apt install -y nodejs
+  node --version  # Verify it's 18.x or higher
+  ```
+- Clear cache and rebuild:
+  ```bash
+  sudo npm cache clean --force
+  sudo rm -rf node_modules package-lock.json
+  sudo npm install
+  sudo npm run build
+  ```
 
 ## 📖 Usage
 
