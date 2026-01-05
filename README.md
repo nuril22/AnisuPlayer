@@ -460,8 +460,11 @@ sudo ufw status
    ```
 
 3. **Access Your Application:**
-   - With domain: `http://your-domain.com` or `https://your-domain.com`
-   - Without domain: `http://your-vps-ip`
+   - **IMPORTANT:** Do NOT access `http://your-vps-ip:3001` directly!
+   - Access through Nginx (port 80/443):
+     - With domain: `http://your-domain.com` or `https://your-domain.com`
+     - Without domain: `http://your-vps-ip` (port 80) or `https://your-vps-ip` (port 443)
+   - Port 3001 is only for internal use (localhost), not accessible from outside
 
 ### Useful Commands
 
@@ -493,9 +496,21 @@ pm2 restart anisuplayer
 ### Troubleshooting
 
 **Application not starting:**
+- Check PM2 status: `pm2 status`
 - Check PM2 logs: `pm2 logs anisuplayer`
 - Verify environment variables in `.env`
-- Check if port 3001 is available: `sudo netstat -tulpn | grep 3001`
+- Check if port 3001 is listening: `sudo netstat -tulpn | grep 3001`
+- Restart application: `pm2 restart anisuplayer`
+
+**"Cannot GET" error when accessing port 3001:**
+- **This is normal!** Port 3001 is only for internal use (localhost)
+- **Access your application through Nginx:**
+  - Use `http://your-vps-ip` (port 80) instead of `http://your-vps-ip:3001`
+  - Or use your domain: `http://your-domain.com`
+- Verify Nginx is running: `sudo systemctl status nginx`
+- Check Nginx configuration: `sudo nginx -t`
+- Verify PM2 is running: `pm2 status`
+- Check if files are built: `ls -la /var/www/AnisuPlayer/dist`
 
 **Nginx 502 Bad Gateway:**
 - Verify backend is running: `pm2 status`
