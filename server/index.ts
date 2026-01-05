@@ -46,8 +46,13 @@ const subtitlesDir = path.join(storageDir, 'subtitles');
 initializeDatabase();
 
 // Middleware
+// CORS configuration - allow all origins in production, specific in development
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? true // Allow all origins in production
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -88,7 +93,8 @@ app.use('/storage', express.static(path.join(__dirname, '..', 'storage'), {
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/encoding', encodingRoutes);
-app.use('/cdn', cdnRoutes);
+app.use('/api/cdn', cdnRoutes); // Move CDN API to /api/cdn to avoid conflict with React Router
+app.use('/cdn', cdnRoutes); // Keep /cdn for backward compatibility (will be handled by Nginx in production)
 
 // Health check
 app.get('/api/health', (req, res) => {

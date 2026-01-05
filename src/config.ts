@@ -4,8 +4,9 @@
 const isDevelopment = import.meta.env.DEV;
 const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
 
-// Always use relative URLs - Vite proxy handles development routing
-export const API_URL = '';
+// In development, use full backend URL for /cdn API calls to avoid proxy conflict with React Router
+// In production, use relative URLs
+export const API_URL = isDevelopment ? 'http://localhost:3001' : '';
 
 export const isVercelDeployment = isVercel;
 export const isDev = isDevelopment;

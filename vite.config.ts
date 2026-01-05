@@ -26,6 +26,9 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       }
+      // Note: /cdn route is NOT proxied here
+      // React Router handles /cdn/:id page routes
+      // API calls from VideoPlayerPage will use full backend URL in development
     }
   },
   build: {

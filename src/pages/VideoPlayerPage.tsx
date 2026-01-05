@@ -19,16 +19,33 @@ export default function VideoPlayerPage() {
   const fetchVideo = async (videoId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/videos/${videoId}`);
+      // Use /api/cdn endpoint to avoid conflict with React Router /cdn/:id route
+      const response = await fetch(`${API_URL}/api/cdn/${videoId}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format. Server may be returning HTML instead of JSON.');
+      }
       
       if (!response.ok) {
-        throw new Error('Video not found');
+        const errorData = await response.json().catch(() => ({ error: 'Video not found' }));
+        throw new Error(errorData.error || 'Video not found');
       }
       
       const data = await response.json();
       setVideo(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load video');
+      if (err instanceof SyntaxError) {
+        setError('Server returned invalid data. Please check if the backend is running.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to load video');
+      }
     } finally {
       setLoading(false);
     }

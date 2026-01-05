@@ -39,6 +39,46 @@ A modern, feature-rich video player with multi-resolution support, built with Re
 
 ## 🚀 Quick Start
 
+### Quick Install (VPS - Recommended)
+
+For quick installation on a VPS, use our automated install script:
+
+```bash
+# Download and run the quick install script
+curl -fsSL https://gist.githubusercontent.com/nuril22/efa981e23d2c88e267df26714088f7e9/raw/040fe6613603ea6d8fa77df27c45ec413d47ba77/quick-install.sh | sudo bash
+```
+
+Or download the script first:
+
+```bash
+# Download the script
+wget https://gist.githubusercontent.com/nuril22/efa981e23d2c88e267df26714088f7e9/raw/040fe6613603ea6d8fa77df27c45ec413d47ba77/quick-install.sh -O quick-install.sh
+
+# Make it executable
+chmod +x quick-install.sh
+
+# Run as root
+sudo ./quick-install.sh
+```
+
+The script will:
+- ✅ Install Node.js 20.x, FFmpeg, PM2, and Nginx
+- ✅ Clone the repository
+- ✅ Install dependencies and build the project
+- ✅ Setup environment variables
+- ✅ Configure PM2 and Nginx
+- ✅ Setup firewall rules
+
+**Note:** You'll be prompted for:
+- Domain name (optional, press Enter to use IP)
+- Admin username (default: admin)
+- Admin password
+- Installation directory (default: /var/www/AnisuPlayer)
+
+📖 **For detailed quick install documentation, see [QUICK_INSTALL.md](QUICK_INSTALL.md)**
+
+### Manual Installation
+
 ### Prerequisites
 
 - **Node.js** 20.19+ or 22.12+ (required - Vite 7.3+ requires Node.js 20.19+ or 22.12+)
@@ -366,11 +406,35 @@ server {
     client_max_body_size 2G;
     client_body_timeout 300s;
 
-    # Frontend (React App)
-    location / {
-        root /var/www/AnisuPlayer/dist;
-        try_files $uri $uri/ /index.html;
-        index index.html;
+    # Storage files (videos, thumbnails, subtitles) - MUST be first (most specific)
+    location /storage {
+        alias /var/www/AnisuPlayer/storage;
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods 'GET, OPTIONS';
+        add_header Access-Control-Allow-Headers 'Range';
+        add_header Accept-Ranges bytes;
+        
+        # Set proper MIME types for HLS
+        location ~* \.m3u8$ {
+            add_header Content-Type 'application/vnd.apple.mpegurl';
+            add_header Access-Control-Allow-Origin *;
+        }
+        
+        location ~* \.ts$ {
+            add_header Content-Type 'video/mp2t';
+            add_header Access-Control-Allow-Origin *;
+        }
+        
+        # CORS preflight
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods 'GET, OPTIONS';
+            add_header Access-Control-Allow-Headers 'Range';
+            add_header Access-Control-Max-Age 1728000;
+            add_header Content-Type 'text/plain; charset=utf-8';
+            add_header Content-Length 0;
+            return 204;
+        }
     }
 
     # Backend API
@@ -388,14 +452,25 @@ server {
         proxy_connect_timeout 300s;
     }
 
-    # CDN Route
-    location /cdn {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # CDN Route - React Router handles /cdn/:id pages
+    # API calls use /api/cdn/:id endpoint (handled by /api location above)
+    # No need to proxy /cdn here - let React Router handle it via location /
+
+    # Static files caching (JS, CSS, fonts, etc.)
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg)$ {
+        root /var/www/AnisuPlayer/dist;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Access-Control-Allow-Origin *;
+    }
+
+    # Frontend (React App) - MUST be last to catch all routes including /cdn/:id
+    # React Router will handle /cdn/:id routing on the client side
+    location / {
+        root /var/www/AnisuPlayer/dist;
+        try_files $uri $uri/ /index.html;
+        index index.html;
+        add_header Access-Control-Allow-Origin *;
     }
 
     # Static files caching
@@ -491,6 +566,110 @@ npm install
 npm run build
 npm run build:server
 pm2 restart anisuplayer
+```
+
+## 🗑️ Uninstall AnisuPlayer
+
+If you want to completely remove AnisuPlayer from your VPS:
+
+### Step 1: Stop and Remove PM2 Process
+
+```bash
+# Stop the application
+pm2 stop anisuplayer
+
+# Delete from PM2
+pm2 delete anisuplayer
+
+# Remove PM2 from startup (optional)
+pm2 unstartup systemd
+```
+
+### Step 2: Remove Nginx Configuration
+
+```bash
+# Remove Nginx site
+sudo rm /etc/nginx/sites-enabled/anisuplayer
+sudo rm /etc/nginx/sites-available/anisuplayer
+
+# Test and reload Nginx
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Step 3: Remove Application Files
+
+```bash
+# Remove installation directory (adjust path if different)
+sudo rm -rf /var/www/AnisuPlayer
+
+# Or if you want to keep data, backup first:
+# sudo cp -r /var/www/AnisuPlayer/storage /backup/anisuplayer-storage
+# sudo rm -rf /var/www/AnisuPlayer
+```
+
+### Step 4: Remove Database (Optional)
+
+```bash
+# If you want to remove the database file
+sudo rm -f /var/www/AnisuPlayer/anisuplayer.db
+
+# Or if database is in a different location, find and remove it
+# find /var/www/AnisuPlayer -name "*.db" -type f
+```
+
+### Step 5: Remove System Dependencies (Optional)
+
+**⚠️ Warning:** Only do this if you're not using these packages for other applications.
+
+```bash
+# Remove Node.js (if not needed for other apps)
+sudo apt remove nodejs npm -y
+
+# Remove PM2 (if not needed for other apps)
+sudo npm uninstall -g pm2
+
+# Remove FFmpeg (if not needed for other apps)
+sudo apt remove ffmpeg -y
+
+# Remove Nginx (if not needed for other apps)
+sudo apt remove nginx -y
+```
+
+### Step 6: Clean Up (Optional)
+
+```bash
+# Remove npm cache
+sudo npm cache clean --force
+
+# Remove unused packages
+sudo apt autoremove -y
+sudo apt autoclean -y
+```
+
+### Complete Uninstall Script
+
+You can also create a quick uninstall script:
+
+```bash
+#!/bin/bash
+# Quick uninstall script
+
+echo "Stopping AnisuPlayer..."
+pm2 stop anisuplayer 2>/dev/null || true
+pm2 delete anisuplayer 2>/dev/null || true
+
+echo "Removing Nginx configuration..."
+sudo rm -f /etc/nginx/sites-enabled/anisuplayer
+sudo rm -f /etc/nginx/sites-available/anisuplayer
+sudo nginx -t && sudo systemctl reload nginx
+
+echo "Removing application files..."
+read -p "Enter installation directory [/var/www/AnisuPlayer]: " INSTALL_DIR
+INSTALL_DIR=${INSTALL_DIR:-/var/www/AnisuPlayer}
+sudo rm -rf "$INSTALL_DIR"
+
+echo "AnisuPlayer has been uninstalled."
 ```
 
 ### Troubleshooting
