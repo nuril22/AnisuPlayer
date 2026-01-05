@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Hls from 'hls.js';
-import { Video, VideoSource, PlayerSettings } from '../../types';
+import type { Video, VideoSource, PlayerSettings } from '../../types';
 import { API_URL } from '../../config';
 import ContextMenu from './ContextMenu';
 import SettingsPanel from './SettingsPanel';
@@ -57,7 +57,6 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   
   // Speed boost state (hold for 2x)
   const [isSpeedBoosted, setIsSpeedBoosted] = useState(false);
-  const [isHoldingClick, setIsHoldingClick] = useState(false);
   
   // Seek indicator state
   const [seekIndicator, setSeekIndicator] = useState<{ direction: 'forward' | 'backward'; seconds: number } | null>(null);
@@ -285,15 +284,13 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
     // Only left click
     if (e.button !== 0) return;
     
-    setIsHoldingClick(true);
-    
     // Start speed boost after a short delay (to distinguish from click)
     holdSpeedTimeoutRef.current = window.setTimeout(() => {
       startSpeedBoost();
     }, 200);
   }, [startSpeedBoost]);
 
-  const handleVideoAreaMouseUp = useCallback((e: React.MouseEvent) => {
+  const handleVideoAreaMouseUp = useCallback(() => {
     // Clear hold timeout
     if (holdSpeedTimeoutRef.current) {
       clearTimeout(holdSpeedTimeoutRef.current);
@@ -305,8 +302,6 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
       stopSpeedBoost();
       // Don't pause - video continues playing at normal speed
     }
-    
-    setIsHoldingClick(false);
   }, [isSpeedBoosted, stopSpeedBoost]);
 
   const handleVideoAreaMouseLeave = useCallback(() => {
@@ -321,8 +316,6 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
       stopSpeedBoost();
       // Don't pause - video continues playing at normal speed
     }
-    
-    setIsHoldingClick(false);
   }, [isSpeedBoosted, stopSpeedBoost]);
 
   // Handle video area click (single click = play/pause, double click = fullscreen)
@@ -435,7 +428,6 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   useEffect(() => {
     if (!videoRef.current) return;
     
-    const video = videoRef.current;
     const container = containerRef.current;
     
     // Apply subtitle positioning based on showControls

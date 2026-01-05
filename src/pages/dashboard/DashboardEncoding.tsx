@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { EncodingJob } from '../../types';
+import type { EncodingJob } from '../../types';
 import { API_URL } from '../../config';
 
 const formatTime = (seconds?: number): string => {

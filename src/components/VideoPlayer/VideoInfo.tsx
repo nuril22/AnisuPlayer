@@ -1,4 +1,4 @@
-import { Video } from '../../types';
+import type { Video } from '../../types';
 
 interface VideoInfoProps {
   video: Video;
@@ -45,9 +45,6 @@ const formatDate = (dateString: string): string => {
 };
 
 export default function VideoInfo({ video, currentQuality, onClose }: VideoInfoProps) {
-  // Get current source based on quality
-  const currentSource = video.sources.find(s => s.resolution === currentQuality) || video.sources[0];
-  
   // Calculate total file size
   const totalSize = video.sources.reduce((acc, s) => acc + (s.file_size || 0), 0);
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import VideoPlayer from '../components/VideoPlayer';
-import { Video } from '../types';
+import type { Video } from '../types';
 import { API_URL } from '../config';
 
 export default function VideoPlayerPage() {

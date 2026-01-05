@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Video, Subtitle } from '../../types';
+import type { Video, Subtitle } from '../../types';
 import { API_URL } from '../../config';
 
 export default function DashboardEditVideo() {

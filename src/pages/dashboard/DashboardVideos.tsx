@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Video } from '../../types';
+import type { Video } from '../../types';
 import { API_URL } from '../../config';
 
 const formatDuration = (seconds?: number): string => {

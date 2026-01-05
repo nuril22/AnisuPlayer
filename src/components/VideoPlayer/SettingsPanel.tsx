@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { VideoSource, Subtitle, PlayerSettings } from '../../types';
+import type { VideoSource, Subtitle, PlayerSettings } from '../../types';
 
 interface SettingsPanelProps {
   settings: PlayerSettings;
