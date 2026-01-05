@@ -1,0 +1,1043 @@
+/* Video Player Container */
+.video-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  background: #000;
+  overflow: hidden;
+  user-select: none;
+  aspect-ratio: 16/9;
+}
+
+.video-player.fullscreen {
+  max-height: none;
+  aspect-ratio: unset;
+}
+
+/* Video Element */
+.video-element {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Subtitle Styling - Remove background and position dynamically */
+/* Standard CSS for subtitle cues - works in all browsers */
+.video-element::cue {
+  background: transparent !important;
+  background-color: transparent !important;
+  text-shadow: 
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.7);
+  color: #fff !important;
+  font-size: 1.15em !important;
+  font-weight: bold !important;
+  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  line-height: 1.5 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* WebKit-specific subtitle styling (Chrome, Safari, Edge) */
+.video-element::-webkit-media-text-track-container {
+  position: relative;
+  z-index: 30 !important; /* Above controls (z-index: 20) */
+  pointer-events: none;
+}
+
+/* Base subtitle display styling */
+.video-element::-webkit-media-text-track-display {
+  background: transparent !important;
+  background-color: transparent !important;
+  text-shadow: 
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.7);
+  color: #fff !important;
+  font-size: 1.15em !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-align: center !important;
+}
+
+/* Font for ASS subtitles - apply to all subtitles for now (can be made specific later) */
+.video-element::-webkit-media-text-track-display {
+  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  font-weight: bold !important;
+}
+
+.video-element::-webkit-media-text-track-region {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Firefox subtitle styling */
+.video-element::-moz-media-text-track-container {
+  position: relative;
+  z-index: 30 !important;
+  pointer-events: none;
+}
+
+/* Base Firefox subtitle display */
+.video-element::-moz-media-text-track-display {
+  background: transparent !important;
+  background-color: transparent !important;
+  text-shadow: 
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.7);
+  color: #fff !important;
+  font-size: 1.15em !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+
+/* Font for ASS subtitles - apply to all subtitles for now (can be made specific later) */
+.video-element::-moz-media-text-track-display {
+  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  font-weight: bold !important;
+}
+
+/* Video Click Area - for play/pause on click */
+.video-click-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* Speed Boost Indicator */
+.speed-boost-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 28px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  z-index: 15;
+  animation: fadeInScale 0.2s ease;
+}
+
+.speed-boost-indicator svg {
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+}
+
+.speed-boost-indicator span {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Seek Indicators */
+.seek-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  display: flex;
+  align-items: center;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.seek-indicator-left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 40px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+  animation: seekLeftPulse 0.8s ease-out;
+}
+
+.seek-indicator-right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 40px;
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+  animation: seekRightPulse 0.8s ease-out;
+}
+
+.seek-indicator-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: seekBounce 0.3s ease-out;
+}
+
+.seek-indicator-content svg {
+  width: 48px;
+  height: 48px;
+  color: #fff;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.seek-indicator-left .seek-indicator-content svg {
+  transform: rotate(180deg);
+}
+
+.seek-indicator-content span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes seekLeftPulse {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes seekRightPulse {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes seekBounce {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Loading State */
+.player-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.player-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Big Play Button */
+.big-play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.big-play-button svg {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  margin-left: 4px;
+}
+
+.big-play-button:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  background: rgba(0, 245, 212, 0.3);
+  border-color: var(--primary);
+}
+
+/* Controls Overlay */
+.controls-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.video-player.show-controls .controls-overlay,
+.controls-overlay.visible {
+  opacity: 1;
+  /* Keep overlay as pointer-events: none, only children get pointer events */
+}
+
+/* Only actual control elements receive pointer events */
+.controls-top,
+.controls-bottom {
+  pointer-events: auto;
+}
+
+/* Gradients */
+.controls-gradient-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+  pointer-events: none;
+}
+
+.controls-gradient-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  pointer-events: none;
+}
+
+/* Top Controls */
+.controls-top {
+  position: relative;
+  padding: 20px 24px;
+  z-index: 1;
+}
+
+.video-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bottom Controls */
+.controls-bottom {
+  position: relative;
+  padding: 0 16px 16px;
+  z-index: 1;
+}
+
+/* Progress Bar */
+.progress-container {
+  position: relative;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: height 0.15s ease;
+}
+
+.progress-container:hover {
+  height: 8px;
+}
+
+.progress-buffered {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.progress-played {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #00e5c4);
+  border-radius: 3px;
+}
+
+.progress-scrubber {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  background: var(--primary);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.15s ease;
+  box-shadow: 0 0 10px rgba(0, 245, 212, 0.5);
+}
+
+.progress-container:hover .progress-scrubber {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Progress Preview */
+.progress-preview {
+  position: absolute;
+  bottom: 20px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 12px;
+  pointer-events: none;
+}
+
+.preview-time {
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+}
+
+/* Control Buttons Bar */
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.controls-left,
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Control Buttons */
+.control-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.control-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.control-btn .btn-label {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+/* Volume Control */
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.volume-slider {
+  width: 0;
+  opacity: 0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.volume-control:hover .volume-slider {
+  width: 80px;
+  opacity: 1;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Time Display */
+.time-display {
+  font-size: 0.9rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255, 255, 255, 0.9);
+  margin-left: 8px;
+}
+
+.time-separator {
+  margin: 0 4px;
+  opacity: 0.6;
+}
+
+/* Indicators */
+.speed-indicator,
+.quality-indicator {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.speed-indicator {
+  background: rgba(0, 245, 212, 0.2);
+  color: var(--primary);
+}
+
+/* Settings Panel */
+.settings-panel {
+  position: absolute;
+  bottom: 80px;
+  right: 16px;
+  width: 280px;
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: slideUp 0.2s ease;
+  z-index: 30;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settings-back-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.settings-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.settings-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-menu {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.settings-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.settings-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-item-icon {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-item-label {
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.settings-item-value {
+  font-size: 0.85rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-item-value svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+}
+
+/* Settings Options List */
+.settings-options {
+  padding: 8px 0;
+}
+
+.settings-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.settings-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.settings-option.active {
+  color: var(--primary);
+}
+
+.settings-option-label {
+  font-size: 0.9rem;
+}
+
+.settings-option-check {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+/* Shortcuts Modal */
+.shortcuts-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.2s ease;
+}
+
+.shortcuts-modal {
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: scaleIn 0.2s ease;
+}
+
+.shortcuts-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shortcuts-modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.shortcuts-modal-content {
+  padding: 20px 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.shortcuts-group {
+  margin-bottom: 24px;
+}
+
+.shortcuts-group:last-child {
+  margin-bottom: 0;
+}
+
+.shortcuts-group-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.shortcut-description {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: 6px;
+}
+
+.shortcut-key {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+}
+
+/* Video Info Modal */
+.video-info-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.2s ease;
+}
+
+.video-info-modal {
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 480px;
+  overflow: hidden;
+  animation: scaleIn 0.2s ease;
+}
+
+.video-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-info-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.video-info-content {
+  padding: 20px 24px;
+}
+
+.video-info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.video-info-item:last-child {
+  border-bottom: none;
+}
+
+.video-info-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.video-info-value {
+  font-size: 0.9rem;
+  color: #fff;
+  text-align: right;
+  max-width: 60%;
+  word-break: break-word;
+}
+
+/* Context Menu */
+.context-menu {
+  position: fixed;
+  min-width: 200px;
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 100;
+  animation: scaleIn 0.15s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.context-menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.context-menu-item svg {
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+.context-menu-footer {
+  padding: 10px 16px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.context-menu-footer span {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* Speed Sub-menu */
+.context-submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-width: 120px;
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.context-submenu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.context-submenu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.context-submenu-item.active {
+  color: var(--primary);
+}
+
+.context-submenu-item .check-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .video-title {
+    font-size: 1rem;
+    max-width: 70%;
+  }
+  
+  .control-btn {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .control-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .time-display {
+    font-size: 0.8rem;
+  }
+  
+  .volume-control:hover .volume-slider {
+    width: 60px;
+  }
+  
+  .settings-panel {
+    width: 260px;
+    bottom: 70px;
+  }
+  
+  .shortcuts-modal,
+  .video-info-modal {
+    width: 95%;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls-bottom {
+    padding: 0 12px 12px;
+  }
+  
+  .control-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .control-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .controls-left,
+  .controls-right {
+    gap: 4px;
+  }
+  
+  .time-display {
+    display: none;
+  }
+  
+  .quality-indicator {
+    display: none;
+  }
+}
+
