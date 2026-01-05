@@ -41,15 +41,15 @@ A modern, feature-rich video player with multi-resolution support, built with Re
 
 ### Prerequisites
 
-- **Node.js** 18.x or higher (required - TypeScript 5.9 needs Node.js 14+, but 18+ recommended)
+- **Node.js** 20.19+ or 22.12+ (required - Vite 7.3+ requires Node.js 20.19+ or 22.12+)
 - **npm** or **yarn**
 - **FFmpeg** (required for video encoding - local development only)
 
-**⚠️ Important:** Make sure your Node.js version is 18.x or higher. You can check with:
+**⚠️ Important:** Make sure your Node.js version is 20.19+ or 22.12+. You can check with:
 ```bash
 node --version
 ```
-If you see a version lower than v18.0.0, please upgrade Node.js before proceeding.
+If you see a version lower than v20.19.0, please upgrade Node.js before proceeding.
 
 ### Installation
 
@@ -192,16 +192,17 @@ sudo apt update && sudo apt upgrade -y
 # Remove old Node.js if exists (optional)
 sudo apt remove nodejs npm -y 2>/dev/null || true
 
-# Install Node.js 18.x (LTS)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Install Node.js 20.x (LTS) - Required for Vite 7.3+
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# Verify Node.js version (should be 18.x or higher)
+# Verify Node.js version (should be 20.19+ or 22.12+)
 node --version
 npm --version
 
 # If version is still old, try alternative installation method:
-# curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# For Node.js 22.x:
+# curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 # sudo apt install -y nodejs
 
 # Install FFmpeg
@@ -214,7 +215,7 @@ sudo npm install -g pm2
 sudo apt install -y nginx
 ```
 
-**⚠️ Important:** Make sure Node.js version is **18.x or higher**. TypeScript 5.9 requires Node.js 14+, but we recommend 18+ for better compatibility.
+**⚠️ Important:** Make sure Node.js version is **20.19+ or 22.12+**. Vite 7.3+ requires Node.js 20.19+ or 22.12+ for proper functionality.
 
 ### Step 3: Clone and Setup Project
 
@@ -228,7 +229,7 @@ cd AnisuPlayer
 
 # Verify Node.js version before proceeding
 node --version
-# Should show v18.x.x or higher
+# Should show v20.19.x or higher (or v22.12.x+)
 
 # If version is incorrect, check Node.js installation:
 # which node
@@ -507,22 +508,33 @@ pm2 restart anisuplayer
 - Renew certificate: `sudo certbot renew`
 - Check certificate status: `sudo certbot certificates`
 
-**Build errors (SyntaxError: Unexpected token '?'):**
-- **This means Node.js version is too old!**
-- Check version: `node --version` (must be 18.x or higher)
-- Reinstall Node.js 18+:
-  ```bash
-  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-  sudo apt install -y nodejs
-  node --version  # Verify it's 18.x or higher
-  ```
-- Clear cache and rebuild:
-  ```bash
-  sudo npm cache clean --force
-  sudo rm -rf node_modules package-lock.json
-  sudo npm install
-  sudo npm run build
-  ```
+**Build errors:**
+- **"Vite requires Node.js version 20.19+ or 22.12+"** or **"SyntaxError: Unexpected token '?'"**:
+  - **This means Node.js version is too old!**
+  - Check version: `node --version` (must be 20.19+ or 22.12+)
+  - Reinstall Node.js 20.x:
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt install -y nodejs
+    node --version  # Verify it's 20.19.x or higher
+    ```
+  - Or install Node.js 22.x:
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    sudo apt install -y nodejs
+    node --version  # Verify it's 22.12.x or higher
+    ```
+  - Clear cache and rebuild:
+    ```bash
+    sudo npm cache clean --force
+    sudo rm -rf node_modules package-lock.json
+    sudo npm install
+    sudo npm run build
+    ```
+
+- **"crypto.hash is not a function"**:
+  - This error occurs when Node.js version is incompatible with Vite 7.3+
+  - **Solution:** Upgrade to Node.js 20.19+ or 22.12+ (see above)
 
 ## 📖 Usage
 
