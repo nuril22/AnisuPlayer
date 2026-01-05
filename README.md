@@ -304,8 +304,8 @@ sudo chmod -R 755 storage
 ### Step 6: Setup PM2 Process Manager
 
 ```bash
-# Create PM2 ecosystem file
-sudo nano ecosystem.config.js
+# Create PM2 ecosystem file (using .cjs extension for CommonJS compatibility)
+sudo nano ecosystem.config.cjs
 ```
 
 Add the following configuration:
@@ -331,12 +331,14 @@ module.exports = {
 };
 ```
 
+**Note:** The file must be named `ecosystem.config.cjs` (not `.js`) because the project uses ES modules (`"type": "module"` in package.json), and PM2 requires CommonJS format.
+
 ```bash
 # Create logs directory
 sudo mkdir -p logs
 
 # Start application with PM2
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Save PM2 configuration
 pm2 save
