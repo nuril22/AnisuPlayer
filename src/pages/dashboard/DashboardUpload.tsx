@@ -72,6 +72,19 @@ export default function DashboardUpload() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      const validExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.flv', '.wmv'];
+      const validMimeTypes = ['video/mp4', 'video/x-matroska', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-ms-wmv'];
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!validExtensions.includes(ext) && !validMimeTypes.some(mime => file.type === mime)) {
+        alert(`Unsupported file type. Please select a video file: ${validExtensions.join(', ')}`);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      
       setSelectedFile(file);
       if (!title) {
         setTitle(file.name.replace(/\.[^/.]+$/, ''));
@@ -228,12 +241,12 @@ export default function DashboardUpload() {
                 <h3>Drop your video here</h3>
                 <p>or click to browse</p>
                 <div className="file-dropzone-info">
-                  Supported formats: MP4, MKV, AVI, MOV, WebM • Max 5GB
+                  Supported formats: MP4, MKV, AVI, MOV, WebM, M4V • Max 5GB
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="video/*"
+                  accept="video/mp4,video/x-matroska,video/quicktime,video/x-msvideo,video/webm,video/mp4,.mp4,.mkv,.avi,.mov,.webm,.m4v"
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />

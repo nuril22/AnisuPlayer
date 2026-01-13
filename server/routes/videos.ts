@@ -208,6 +208,9 @@ router.post('/upload', authMiddleware, upload.single('video'), async (req: Reque
 
     const { title, description, enableEncoding } = req.body;
     const shouldEncode = enableEncoding === 'true' || enableEncoding === true;
+    
+    console.log(`📤 Video upload received: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
+    console.log(`📝 Title: ${title}, Enable Encoding: ${shouldEncode}`);
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
@@ -225,14 +228,30 @@ router.post('/upload', authMiddleware, upload.single('video'), async (req: Reque
 
     if (shouldEncode) {
       // Start encoding job (existing behavior)
-      const jobId = await startEncodingJob(videoId, uploadedFilePath);
+      try {
+        console.log(`🎬 Starting encoding for video ${videoId}...`);
+        const jobId = await startEncodingJob(videoId, uploadedFilePath);
+        console.log(`✅ Encoding job ${jobId} started successfully for video ${videoId}`);
 
-      res.json({
-        success: true,
-        videoId,
-        jobId,
-        message: 'Video uploaded and encoding started'
-      });
+        res.json({
+          success: true,
+          videoId,
+          jobId,
+          message: 'Video uploaded and encoding started'
+        });
+      } catch (encodingError) {
+        console.error('❌ Error starting encoding job:', encodingError);
+        // Clean up video record if encoding fails
+        db.prepare('DELETE FROM videos WHERE id = ?').run(videoId);
+        if (fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+        res.status(500).json({ 
+          error: 'Failed to start encoding job', 
+          details: encodingError instanceof Error ? encodingError.message : 'Unknown error'
+        });
+        return;
+      }
     } else {
       // No encoding: save file directly and create single source
       try {
@@ -347,6 +366,23 @@ const subtitleStorage = multer.diskStorage({
   }
 });
 
+// Font file storage
+const fontStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const videoId = req.params.id;
+    const fontDir = path.join(__dirname, '..', '..', 'storage', 'fonts', videoId);
+    if (!fs.existsSync(fontDir)) {
+      fs.mkdirSync(fontDir, { recursive: true });
+    }
+    cb(null, fontDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueId = nanoid(8);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${uniqueId}${ext}`);
+  }
+});
+
 const subtitleUpload = multer({
   storage: subtitleStorage,
   limits: {
@@ -359,6 +395,22 @@ const subtitleUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Invalid file type. Only .vtt, .srt, and .ass files are allowed.'));
+    }
+  }
+});
+
+const fontUpload = multer({
+  storage: fontStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max for fonts
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /ttf|otf|woff|woff2/;
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+    if (allowedTypes.test(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only .ttf, .otf, .woff, and .woff2 files are allowed.'));
     }
   }
 });
@@ -517,20 +569,95 @@ function convertAssToVtt(assContent: string): string {
   return vttContent;
 }
 
-// Upload subtitle file
-router.post('/:id/subtitles/upload', authMiddleware, subtitleUpload.single('subtitle'), async (req: Request, res: Response) => {
+// Upload subtitle file with optional font
+router.post('/:id/subtitles/upload', authMiddleware, (req: Request, res: Response, next: any) => {
+  const videoId = req.params.id;
+  
+  // Use multer fields to handle both subtitle and font
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        if (file.fieldname === 'subtitle') {
+          const subtitleDir = path.join(__dirname, '..', '..', 'storage', 'subtitles', videoId);
+          if (!fs.existsSync(subtitleDir)) {
+            fs.mkdirSync(subtitleDir, { recursive: true });
+          }
+          cb(null, subtitleDir);
+        } else if (file.fieldname === 'font') {
+          const fontDir = path.join(__dirname, '..', '..', 'storage', 'fonts', videoId);
+          if (!fs.existsSync(fontDir)) {
+            fs.mkdirSync(fontDir, { recursive: true });
+          }
+          cb(null, fontDir);
+        } else {
+          cb(new Error('Invalid field name'));
+        }
+      },
+      filename: (req, file, cb) => {
+        const uniqueId = nanoid(8);
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `${uniqueId}${ext}`);
+      }
+    }),
+    limits: {
+      fileSize: 10 * 1024 * 1024 // 10MB max
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.fieldname === 'subtitle') {
+        const allowedTypes = /vtt|srt|ass/;
+        const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+        if (allowedTypes.test(ext)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Invalid subtitle file type. Only .vtt, .srt, and .ass files are allowed.'));
+        }
+      } else if (file.fieldname === 'font') {
+        const allowedTypes = /ttf|otf|woff|woff2/;
+        const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+        if (allowedTypes.test(ext)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Invalid font file type. Only .ttf, .otf, .woff, and .woff2 files are allowed.'));
+        }
+      } else {
+        cb(new Error('Invalid field name'));
+      }
+    }
+  }).fields([
+    { name: 'subtitle', maxCount: 1 },
+    { name: 'font', maxCount: 1 }
+  ]);
+  
+  upload(req, res, next);
+}, async (req: Request, res: Response) => {
   try {
-    if (!req.file) {
+    const files = (req as any).files;
+    const subtitleFile = files?.subtitle?.[0];
+    const fontFile = files?.font?.[0];
+    
+    if (!subtitleFile) {
       res.status(400).json({ error: 'No subtitle file uploaded' });
       return;
     }
 
     const { id } = req.params;
     const { label, language, is_default } = req.body;
+    
+    // Get file extension
+    const ext = path.extname(subtitleFile.originalname).toLowerCase();
+    
+    // Check if ASS file requires font
+    if (ext === '.ass' && !fontFile) {
+      // Delete uploaded subtitle file
+      fs.unlinkSync(subtitleFile.path);
+      res.status(400).json({ error: 'ASS subtitle files require a font file. Please upload a font file (.ttf, .otf, .woff, or .woff2)' });
+      return;
+    }
 
     if (!label || !language) {
-      // Delete uploaded file
-      fs.unlinkSync(req.file.path);
+      // Delete uploaded files
+      if (subtitleFile) fs.unlinkSync(subtitleFile.path);
+      if (fontFile) fs.unlinkSync(fontFile.path);
       res.status(400).json({ error: 'Label and language are required' });
       return;
     }
@@ -538,42 +665,59 @@ router.post('/:id/subtitles/upload', authMiddleware, subtitleUpload.single('subt
     // Check if video exists
     const video = db.prepare('SELECT id FROM videos WHERE id = ?').get(id);
     if (!video) {
-      fs.unlinkSync(req.file.path);
+      if (subtitleFile) fs.unlinkSync(subtitleFile.path);
+      if (fontFile) fs.unlinkSync(fontFile.path);
       res.status(404).json({ error: 'Video not found' });
       return;
     }
 
-    let finalPath = req.file.path;
-    const ext = path.extname(req.file.originalname).toLowerCase();
+    let finalPath = subtitleFile.path;
     
-    // Convert SRT and ASS to VTT for better browser support
-    if (ext === '.srt' || ext === '.ass') {
+    // For SRT files: Convert to VTT for browser support
+    // For ASS files: Keep original AND create VTT fallback
+    if (ext === '.srt') {
       // Read file with UTF-8 encoding, handling BOM if present
-      let content = fs.readFileSync(req.file.path, 'utf-8');
+      let content = fs.readFileSync(subtitleFile.path, 'utf-8');
       // Remove BOM if present
       if (content.charCodeAt(0) === 0xFEFF) {
         content = content.slice(1);
       }
       
-      let vttContent: string;
+      const vttContent = convertSrtToVtt(content);
       
-      if (ext === '.srt') {
-        vttContent = convertSrtToVtt(content);
-      } else {
-        // ASS file
-        vttContent = convertAssToVtt(content);
-      }
-      
-      // Save as VTT (always .vtt extension)
-      const vttPath = req.file.path.replace(/\.(srt|ass)$/i, '.vtt');
-      // Ensure we're writing as UTF-8 without BOM
+      // Save as VTT
+      const vttPath = subtitleFile.path.replace(/\.srt$/i, '.vtt');
       fs.writeFileSync(vttPath, vttContent, { encoding: 'utf-8' });
       
-      // Delete original file
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+      // Delete original SRT file
+      if (fs.existsSync(subtitleFile.path)) {
+        fs.unlinkSync(subtitleFile.path);
       }
       finalPath = vttPath;
+    } else if (ext === '.ass') {
+      // Read ASS file content
+      let content = fs.readFileSync(subtitleFile.path, 'utf-8');
+      // Remove BOM if present
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+        fs.writeFileSync(subtitleFile.path, content, { encoding: 'utf-8' });
+      }
+      
+      // Store font file path if provided
+      if (fontFile) {
+        const fontRelativePath = fontFile.path.replace(path.join(__dirname, '..', '..'), '').replace(/\\/g, '/');
+        // Store font path in subtitle metadata (we can add a fonts table later if needed)
+        console.log(`Font file saved for ASS subtitle: ${fontRelativePath}`);
+      }
+      
+      // Also create a VTT version for fallback (browsers that don't support ASS)
+      const vttContent = convertAssToVtt(content);
+      const vttPath = subtitleFile.path.replace(/\.ass$/i, '.vtt');
+      fs.writeFileSync(vttPath, vttContent, { encoding: 'utf-8' });
+      
+      // Keep the ASS file path as the main path (for ASS-aware players)
+      // The VTT is available as a fallback at the same location with .vtt extension
+      // finalPath remains the same (original .ass file)
     }
 
     // Get relative URL

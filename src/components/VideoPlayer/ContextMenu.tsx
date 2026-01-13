@@ -38,6 +38,7 @@ export default function ContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [position, setPosition] = useState({ x, y });
+  const [submenuPosition, setSubmenuPosition] = useState<'right' | 'left'>('right');
 
   useEffect(() => {
     if (menuRef.current) {
@@ -45,6 +46,14 @@ export default function ContextMenu({
       const newX = x + rect.width > window.innerWidth ? x - rect.width : x;
       const newY = y + rect.height > window.innerHeight ? y - rect.height : y;
       setPosition({ x: newX, y: newY });
+      
+      // Determine submenu position
+      const submenuWidth = 140;
+      if (newX + rect.width + submenuWidth > window.innerWidth) {
+        setSubmenuPosition('left');
+      } else {
+        setSubmenuPosition('right');
+      }
     }
   }, [x, y]);
 
@@ -72,6 +81,13 @@ export default function ContextMenu({
 
   const handleItemClick = (callback: () => void) => {
     callback();
+    onClose();
+  };
+
+  const handleSpeedClick = (e: React.MouseEvent, speed: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onSpeedChange(speed);
     onClose();
   };
 
@@ -122,11 +138,10 @@ export default function ContextMenu({
 
       <div className="context-menu-divider"></div>
 
-      {/* Playback Speed */}
+      {/* Playback Speed - Click to toggle submenu */}
       <div
-        className="context-menu-item has-submenu"
-        onMouseEnter={() => setShowSpeedMenu(true)}
-        onMouseLeave={() => setShowSpeedMenu(false)}
+        className={`context-menu-item has-submenu ${showSpeedMenu ? 'submenu-open' : ''}`}
+        onClick={() => setShowSpeedMenu(!showSpeedMenu)}
       >
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M10 8v8l6-4-6-4z" />
@@ -138,16 +153,15 @@ export default function ContextMenu({
 
         {/* Speed Submenu */}
         {showSpeedMenu && (
-          <div className="context-submenu">
+          <div 
+            className={`context-submenu ${submenuPosition}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             {SPEED_OPTIONS.map((speed) => (
               <div
                 key={speed}
                 className={`context-submenu-item ${currentSpeed === speed ? 'active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSpeedChange(speed);
-                  onClose();
-                }}
+                onClick={(e) => handleSpeedClick(e, speed)}
               >
                 <span>{speed === 1 ? 'Normal' : `${speed}x`}</span>
                 {currentSpeed === speed && (

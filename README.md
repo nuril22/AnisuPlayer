@@ -12,29 +12,57 @@ A modern, feature-rich video player with multi-resolution support, built with Re
 
 ### Video Player
 - 🎮 **Keyboard Shortcuts** - Full keyboard control for seamless navigation
-- 📝 **Subtitles Support** - Multiple subtitle tracks with easy switching
+- 📝 **Advanced Subtitles Support**:
+  - Multiple subtitle tracks with easy switching
+  - **ASS/SSA Subtitle Support** - Full support for ASS subtitles with positioning and styling
+  - **Font Upload** - Upload custom fonts for ASS subtitles
+  - **Auto-Detection** - Automatically extracts embedded subtitles from video files
+  - **External Subtitle Detection** - Finds and processes external subtitle files (.srt, .vtt, .ass)
+  - **Subtitle Overflow Protection** - Subtitles stay within video bounds
+  - **VTT Fallback** - Automatic VTT conversion for better browser compatibility
 - 🎯 **Multi-Resolution** - Automatic quality selection with manual override
 - ⚡ **Playback Speed** - Variable speed control (0.25x to 3x)
 - ⏱️ **Skip Forward/Backward** - Jump 10 seconds with a click or keyboard
 - 👁️ **Progress Preview** - Time preview on progress bar hover
 - ⚙️ **Settings Panel** - Comprehensive settings menu
-- 📱 **Responsive Design** - Works on desktop and mobile
+- 📱 **Mobile-Optimized Controls**:
+  - **Hold for 2x Speed** - Hold screen to play at 2x speed
+  - **Double-Tap Seek** - Double tap left/right to seek backward/forward
+  - **Tap to Pause** - Single tap with visual pause indicator
+  - **Horizontal Fullscreen** - Automatic landscape orientation in fullscreen mode
 - 🖱️ **Custom Context Menu** - Right-click menu with "Powered by AnisuPlayer"
+- 🎨 **Theme Support** - Light and dark mode toggle
 
 ### Dashboard
 - 🔐 **Protected Access** - Secure authentication with JWT
+- 🎨 **Modern UI** - Beautiful, responsive design with theme support
 - 📤 **Dual Upload Methods**:
   - **Direct Upload** - Upload video files directly (with auto-encoding)
   - **Link Upload** - Add videos via URL with custom resolution labels
 - 🔄 **Auto Encoding** - Automatic video encoding to multiple resolutions
+- 🎮 **GPU Acceleration** - GPU encoding with automatic CPU fallback:
+  - **NVIDIA NVENC** - Hardware acceleration for NVIDIA GPUs
+  - **Intel Quick Sync** - Hardware acceleration for Intel GPUs
+  - **VAAPI** - Hardware acceleration for Linux systems
+  - **CPU Fallback** - Automatic fallback to CPU encoding if GPU unavailable
 - 📊 **Encoding Progress** - Real-time progress tracking with ETA
 - 🎥 **Video Management** - Full CRUD operations for videos
 - 📋 **Copy CDN Links** - Easy sharing with one-click copy
+- 🔍 **Search Functionality** - Search videos by title or description
+- 📁 **Collapsible Sidebar** - Collapse sidebar to show only icons
+- 🖱️ **Right-Click Context Menu** - Right-click on video cards for quick actions (copy link, edit, delete)
+- ⚙️ **Settings Page** - Comprehensive settings management
 
 ### Encoding System (Local Development)
-- 🎬 Automatic encoding to 1080p, 720p, 480p, 360p
+- 🎬 Automatic encoding to 1080p, 720p, 480p, 360p (lowest to highest priority)
+- 🎮 **GPU Encoding** - Primary GPU encoding with CPU fallback
 - 📈 Real-time progress with estimated time remaining
 - 🖼️ Automatic thumbnail generation
+- 📝 **Automatic Subtitle Extraction**:
+  - Extracts embedded subtitles from video files
+  - Detects external subtitle files in the same directory
+  - Supports SRT, VTT, ASS/SSA formats
+  - Automatic language detection
 - 📦 Efficient storage with H.264 encoding
 
 ## 🚀 Quick Start
@@ -790,23 +818,52 @@ Since Vercel doesn't support video encoding, use the **Link Upload** feature:
 4. Fill in title and description
 5. Click "Add Video"
 
+### Adding Subtitles
+
+#### Upload Subtitle File
+
+1. Go to Dashboard → Videos → Edit Video
+2. Scroll to "Subtitles" section
+3. Fill in subtitle label and language
+4. Select subtitle file (.vtt, .srt, or .ass)
+5. **For ASS files**: Upload a font file (.ttf, .otf, .woff, or .woff2) - **Required**
+6. Click "Add Subtitle"
+
+#### Automatic Subtitle Detection
+
+When uploading a video file:
+- **Embedded Subtitles**: Automatically extracted from the video file
+- **External Subtitles**: Automatically detected if subtitle files (.srt, .vtt, .ass) are in the same directory as the video
+- Subtitles are automatically added to the video with language detection
+
 ### Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
 | `Space` / `K` | Play/Pause |
+| `Hold Space` | Play at 2x speed (release to return to normal) |
 | `←` / `J` | Rewind 10 seconds |
 | `→` / `L` | Forward 10 seconds |
 | `↑` | Volume up |
 | `↓` | Volume down |
 | `M` | Mute/Unmute |
 | `F` | Toggle fullscreen |
-| `<` | Decrease playback speed |
-| `>` | Increase playback speed |
+| `<` / `,` | Decrease playback speed |
+| `>` / `.` | Increase playback speed |
 | `0-9` | Seek to 0%-90% |
-| `,` | Previous frame (when paused) |
-| `.` | Next frame (when paused) |
+| `Home` | Seek to beginning |
+| `End` | Seek to end |
 | `?` | Show keyboard shortcuts |
+
+### Mobile Touch Controls
+
+| Gesture | Action |
+|---------|--------|
+| **Single Tap** | Play/Pause (with visual indicator) |
+| **Double Tap Left** | Seek backward 10 seconds |
+| **Double Tap Right** | Seek forward 10 seconds |
+| **Hold Screen** | Play at 2x speed |
+| **Fullscreen** | Automatic landscape orientation |
 
 ## 🔧 Local Development
 
@@ -881,12 +938,23 @@ GET /api/encoding/jobs/:id  - Get specific job status
 GET /api/encoding/active    - List active jobs
 ```
 
+### Subtitles
+
+```
+POST   /api/videos/:id/subtitles/upload  - Upload subtitle file (with optional font for ASS)
+DELETE /api/videos/:id/subtitles/:subtitleId  - Delete subtitle
+PUT    /api/videos/:id/subtitles/:subtitleId/default  - Set default subtitle
+```
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite + SWC, React Router
 - **Backend**: Express.js, Node.js, TypeScript
 - **Database**: SQLite (local), Vercel KV (production)
 - **Video Processing**: FFmpeg (local only)
+  - **GPU Encoding**: NVIDIA NVENC, Intel Quick Sync, VAAPI
+  - **CPU Fallback**: libx264 (automatic)
+- **Subtitle Processing**: FFmpeg subtitle extraction and conversion
 - **Authentication**: JWT, bcryptjs
 - **Hosting**: Vercel
 

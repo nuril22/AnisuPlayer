@@ -22,9 +22,11 @@ export default function DashboardEditVideo() {
   const [newSubtitleLabel, setNewSubtitleLabel] = useState('');
   const [newSubtitleLanguage, setNewSubtitleLanguage] = useState('en');
   const [newSubtitleFile, setNewSubtitleFile] = useState<File | null>(null);
+  const [newSubtitleFontFile, setNewSubtitleFontFile] = useState<File | null>(null);
   const [uploadingSubtitle, setUploadingSubtitle] = useState(false);
   
   const subtitleInputRef = useRef<HTMLInputElement>(null);
+  const subtitleFontInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -108,12 +110,43 @@ export default function DashboardEditVideo() {
         const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
         setNewSubtitleLabel(nameWithoutExt);
       }
+      
+      // Clear font file if not ASS
+      if (ext !== '.ass') {
+        setNewSubtitleFontFile(null);
+        if (subtitleFontInputRef.current) {
+          subtitleFontInputRef.current.value = '';
+        }
+      }
+    }
+  };
+
+  const handleSubtitleFontFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate font file type
+      const validExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!validExtensions.includes(ext)) {
+        alert('Please select a valid font file (.ttf, .otf, .woff, or .woff2)');
+        return;
+      }
+      
+      setNewSubtitleFontFile(file);
     }
   };
 
   const handleAddSubtitle = async () => {
     if (!id || !newSubtitleFile || !newSubtitleLabel || !newSubtitleLanguage) {
       alert('Please fill in all subtitle fields');
+      return;
+    }
+    
+    // Check if ASS file requires font
+    const isASS = newSubtitleFile.name.toLowerCase().endsWith('.ass');
+    if (isASS && !newSubtitleFontFile) {
+      alert('ASS subtitle files require a font file. Please upload a font file (.ttf, .otf, .woff, or .woff2)');
       return;
     }
     
@@ -126,6 +159,11 @@ export default function DashboardEditVideo() {
       formData.append('label', newSubtitleLabel);
       formData.append('language', newSubtitleLanguage);
       formData.append('is_default', subtitles.length === 0 ? 'true' : 'false');
+      
+      // Add font file if provided
+      if (newSubtitleFontFile) {
+        formData.append('font', newSubtitleFontFile);
+      }
       
       const response = await fetch(`${API_URL}/api/videos/${id}/subtitles/upload`, {
         method: 'POST',
@@ -143,10 +181,14 @@ export default function DashboardEditVideo() {
       
       // Clear form
       setNewSubtitleFile(null);
+      setNewSubtitleFontFile(null);
       setNewSubtitleLabel('');
       setNewSubtitleLanguage('en');
       if (subtitleInputRef.current) {
         subtitleInputRef.current.value = '';
+      }
+      if (subtitleFontInputRef.current) {
+        subtitleFontInputRef.current.value = '';
       }
       
     } catch (err) {
@@ -432,8 +474,12 @@ export default function DashboardEditVideo() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setNewSubtitleFile(null);
+                            setNewSubtitleFontFile(null);
                             if (subtitleInputRef.current) {
                               subtitleInputRef.current.value = '';
+                            }
+                            if (subtitleFontInputRef.current) {
+                              subtitleFontInputRef.current.value = '';
                             }
                           }}
                         >
@@ -453,6 +499,65 @@ export default function DashboardEditVideo() {
                     )}
                   </div>
                 </div>
+
+                {/* Font File Input - Only shown for ASS files */}
+                {newSubtitleFile && newSubtitleFile.name.toLowerCase().endsWith('.ass') && (
+                  <div className="form-group">
+                    <label>Font File * (Required for ASS subtitles)</label>
+                    <div 
+                      className={`file-dropzone subtitle-dropzone ${newSubtitleFontFile ? 'has-file' : ''}`}
+                      onClick={() => subtitleFontInputRef.current?.click()}
+                    >
+                      <input
+                        ref={subtitleFontInputRef}
+                        type="file"
+                        accept=".ttf,.otf,.woff,.woff2"
+                        onChange={handleSubtitleFontFileSelect}
+                        style={{ display: 'none' }}
+                      />
+                      {newSubtitleFontFile ? (
+                        <div className="file-selected">
+                          <div className="file-selected-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-2.79h-5.62L7.05 18.5H5.5l5.3-12h1.4l5.3 12h-1.55z" />
+                            </svg>
+                          </div>
+                          <div className="file-selected-info">
+                            <span className="file-selected-name">{newSubtitleFontFile.name}</span>
+                            <span className="file-selected-size">
+                              {(newSubtitleFontFile.size / 1024).toFixed(1)} KB
+                            </span>
+                          </div>
+                          <button
+                            className="file-remove-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewSubtitleFontFile(null);
+                              if (subtitleFontInputRef.current) {
+                                subtitleFontInputRef.current.value = '';
+                              }
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <svg className="file-dropzone-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9.93 13.5h4.14L12 7.98zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-4.05 16.5l-1.14-2.79h-5.62L7.05 18.5H5.5l5.3-12h1.4l5.3 12h-1.55z" />
+                          </svg>
+                          <h3>Click to select font file</h3>
+                          <p>.ttf, .otf, .woff, or .woff2 file</p>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                            ASS subtitles require a font file to display correctly
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <button
                   className="btn btn-primary"

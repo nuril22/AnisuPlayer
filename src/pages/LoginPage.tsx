@@ -64,7 +64,10 @@ export default function LoginPage() {
       <div className="login-container">
         <div className="login-card">
           <div className="login-logo">
-            <h1>🎬 AnisuPlayer</h1>
+            <div className="login-logo-img">
+              <img src="/img/anisu.png" alt="AnisuPlayer" />
+            </div>
+            <h1>AnisuPlayer</h1>
             <p>Dashboard Access</p>
           </div>
 

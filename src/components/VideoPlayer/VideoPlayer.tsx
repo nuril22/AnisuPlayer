@@ -1,12 +1,25 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Hls from 'hls.js';
-import type { Video, VideoSource, PlayerSettings } from '../../types';
+import type { Video, VideoSource, PlayerSettings, Subtitle } from '../../types';
 import { API_URL } from '../../config';
 import ContextMenu from './ContextMenu';
 import SettingsPanel from './SettingsPanel';
 import ShortcutsModal from './ShortcutsModal';
 import VideoInfo from './VideoInfo';
 import './VideoPlayer.css';
+
+// Check if subtitle is ASS format
+const isASSSubtitle = (url: string): boolean => {
+  return url.toLowerCase().endsWith('.ass') || url.toLowerCase().includes('.ass');
+};
+
+// Get full subtitle URL
+const getSubtitleUrl = (subtitle: Subtitle): string => {
+  if (subtitle.url.startsWith('http')) {
+    return subtitle.url;
+  }
+  return `${API_URL}${subtitle.url}`;
+};
 
 interface VideoPlayerProps {
   video: Video;
@@ -32,6 +45,11 @@ const sortResolutions = (sources: VideoSource[]): VideoSource[] => {
   });
 };
 
+// Check if device is touch-enabled
+const isTouchDevice = () => {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+};
+
 export default function VideoPlayer({ video }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,11 +57,21 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const hideControlsTimer = useRef<number | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const jassubRef = useRef<any>(null);
   const clickTimeoutRef = useRef<number | null>(null);
   const holdSpeedTimeoutRef = useRef<number | null>(null);
   const originalSpeedRef = useRef<number>(1);
   const justReleasedSpeedBoostRef = useRef<boolean>(false);
   const isSpaceHeldRef = useRef<boolean>(false);
+  
+  // Touch-related refs
+  const touchStartTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(0);
+  const lastTapXRef = useRef<number>(0);
+  const isTouchHoldingRef = useRef<boolean>(false);
+  
+  // ASS subtitle state
+  const [isUsingASSRenderer, setIsUsingASSRenderer] = useState(false);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -57,6 +85,9 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   
   // Speed boost state (hold for 2x)
   const [isSpeedBoosted, setIsSpeedBoosted] = useState(false);
+  
+  // Mobile pause indicator
+  const [showMobilePauseIndicator, setShowMobilePauseIndicator] = useState(false);
   
   // Seek indicator state
   const [seekIndicator, setSeekIndicator] = useState<{ direction: 'forward' | 'backward'; seconds: number } | null>(null);
@@ -95,6 +126,16 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
     return source.url;
   }, []);
 
+  // Cleanup JASSUB on unmount
+  useEffect(() => {
+    return () => {
+      if (jassubRef.current) {
+        jassubRef.current.destroy();
+        jassubRef.current = null;
+      }
+    };
+  }, []);
+
   // Initialize HLS or native playback
   useEffect(() => {
     if (!videoRef.current || !currentSource) return;
@@ -106,6 +147,13 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
+    }
+    
+    // Destroy JASSUB when source changes
+    if (jassubRef.current) {
+      jassubRef.current.destroy();
+      jassubRef.current = null;
+      setIsUsingASSRenderer(false);
     }
 
     if (isHLS(videoUrl)) {
@@ -230,14 +278,26 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
     }
   }, []);
 
-  // Fullscreen
+  // Fullscreen with mobile landscape support
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
     
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen();
+      containerRef.current.requestFullscreen().then(() => {
+        // Try to lock screen orientation to landscape on mobile
+        if (screen.orientation && 'lock' in screen.orientation) {
+          (screen.orientation as any).lock('landscape').catch(() => {
+            // Silently fail if orientation lock is not supported
+          });
+        }
+      });
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen().then(() => {
+        // Unlock screen orientation when exiting fullscreen
+        if (screen.orientation && 'unlock' in screen.orientation) {
+          (screen.orientation as any).unlock();
+        }
+      });
     }
   }, []);
 
@@ -357,6 +417,120 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
     }
   }, [togglePlay, toggleFullscreen, isSpeedBoosted]);
 
+  // Touch event handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.controls-bottom') || 
+        target.closest('.controls-top') ||
+        target.closest('.settings-panel') ||
+        target.closest('.context-menu') ||
+        target.closest('.big-play-button') ||
+        target.closest('.control-btn')) {
+      return;
+    }
+    
+    touchStartTimeRef.current = Date.now();
+    isTouchHoldingRef.current = false;
+    
+    const touch = e.touches[0];
+    const touchX = touch.clientX;
+    
+    // Start hold timer for 2x speed
+    holdSpeedTimeoutRef.current = window.setTimeout(() => {
+      isTouchHoldingRef.current = true;
+      startSpeedBoost();
+    }, 300);
+    
+    // Check for double tap
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapTimeRef.current;
+    const containerWidth = containerRef.current?.clientWidth || window.innerWidth;
+    
+    if (timeSinceLastTap < 300) {
+      // Double tap detected
+      if (holdSpeedTimeoutRef.current) {
+        clearTimeout(holdSpeedTimeoutRef.current);
+        holdSpeedTimeoutRef.current = null;
+      }
+      
+      // Determine if tap is on left or right side
+      if (touchX < containerWidth / 3) {
+        // Double tap left - seek backward
+        seekWithIndicator(-10);
+      } else if (touchX > (containerWidth * 2) / 3) {
+        // Double tap right - seek forward
+        seekWithIndicator(10);
+      }
+      
+      lastTapTimeRef.current = 0; // Reset to prevent triple tap
+    } else {
+      lastTapTimeRef.current = now;
+      lastTapXRef.current = touchX;
+    }
+  }, [startSpeedBoost, seekWithIndicator]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.controls-bottom') || 
+        target.closest('.controls-top') ||
+        target.closest('.settings-panel') ||
+        target.closest('.context-menu') ||
+        target.closest('.big-play-button') ||
+        target.closest('.control-btn')) {
+      return;
+    }
+    
+    // Clear hold timer
+    if (holdSpeedTimeoutRef.current) {
+      clearTimeout(holdSpeedTimeoutRef.current);
+      holdSpeedTimeoutRef.current = null;
+    }
+    
+    // Stop speed boost if active
+    if (isSpeedBoosted) {
+      stopSpeedBoost();
+      return;
+    }
+    
+    // If was holding for speed boost, don't toggle play
+    if (isTouchHoldingRef.current) {
+      isTouchHoldingRef.current = false;
+      return;
+    }
+    
+    // Check for single tap (not part of double tap)
+    const touchDuration = Date.now() - touchStartTimeRef.current;
+    const timeSinceLastTap = Date.now() - lastTapTimeRef.current;
+    
+    // Only toggle play on single tap (wait to check for double tap)
+    if (touchDuration < 200 && timeSinceLastTap < 300) {
+      // Wait to see if it's a double tap
+      setTimeout(() => {
+        if (Date.now() - lastTapTimeRef.current > 250) {
+          togglePlay();
+          // Show mobile pause indicator
+          setShowMobilePauseIndicator(true);
+          setTimeout(() => setShowMobilePauseIndicator(false), 500);
+        }
+      }, 250);
+    }
+  }, [isSpeedBoosted, stopSpeedBoost, togglePlay]);
+
+  const handleTouchCancel = useCallback(() => {
+    // Clear hold timer
+    if (holdSpeedTimeoutRef.current) {
+      clearTimeout(holdSpeedTimeoutRef.current);
+      holdSpeedTimeoutRef.current = null;
+    }
+    
+    // Stop speed boost if active
+    if (isSpeedBoosted) {
+      stopSpeedBoost();
+    }
+    
+    isTouchHoldingRef.current = false;
+  }, [isSpeedBoosted, stopSpeedBoost]);
+
   // Speed
   const setPlaybackSpeed = useCallback((speed: number) => {
     if (videoRef.current) {
@@ -405,23 +579,134 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
     }
   }, [sortedSources]);
 
+  // Destroy JASSUB instance
+  const destroyJASSUB = useCallback(() => {
+    if (jassubRef.current) {
+      jassubRef.current.destroy();
+      jassubRef.current = null;
+      setIsUsingASSRenderer(false);
+    }
+  }, []);
+
+  // Initialize ASS subtitle renderer
+  // Note: For full ASS positioning support, we use a canvas-based renderer
+  // For now, we'll use native tracks with fallback styling
+  const initASSSubtitle = useCallback(async (subtitleUrl: string, subtitleId: number) => {
+    if (!videoRef.current) return;
+    
+    // For ASS subtitles, we need to convert to VTT format for browser playback
+    // The server should provide a converted VTT version
+    // Check if there's a VTT version available
+    const vttUrl = subtitleUrl.replace(/\.ass$/i, '.vtt');
+    
+    try {
+      // Try to load VTT version first
+      const vttResponse = await fetch(vttUrl);
+      if (vttResponse.ok) {
+        // VTT version exists, use native track
+        const trackIndex = video.subtitles.findIndex(s => s.id === subtitleId);
+        if (trackIndex !== -1) {
+          const tracks = videoRef.current.textTracks;
+          if (tracks[trackIndex]) {
+            tracks[trackIndex].mode = 'showing';
+          }
+        }
+        setIsUsingASSRenderer(false);
+        return;
+      }
+    } catch {
+      // VTT not available, continue
+    }
+    
+    // If no VTT, try to use native track anyway (browser might support some ASS features)
+    const trackIndex = video.subtitles.findIndex(s => s.id === subtitleId);
+    if (trackIndex !== -1 && videoRef.current) {
+      const tracks = videoRef.current.textTracks;
+      if (tracks[trackIndex]) {
+        tracks[trackIndex].mode = 'showing';
+      }
+    }
+    setIsUsingASSRenderer(false);
+  }, [video.subtitles]);
+
   // Subtitle change
   const changeSubtitle = useCallback((subtitleId: number | null) => {
     setSettings(prev => ({ ...prev, subtitleId }));
     
+    // Disable all native text tracks
     if (videoRef.current) {
       const tracks = videoRef.current.textTracks;
       for (let i = 0; i < tracks.length; i++) {
         tracks[i].mode = 'disabled';
       }
-      
-      if (subtitleId !== null) {
+    }
+    
+    // Destroy JASSUB if it exists
+    destroyJASSUB();
+    
+    if (subtitleId === null) {
+      return;
+    }
+    
+    // Find the selected subtitle
+    const subtitle = video.subtitles.find(s => s.id === subtitleId);
+    if (!subtitle) return;
+    
+    const subtitleUrl = getSubtitleUrl(subtitle);
+    
+    // Check if it's an ASS subtitle (original file, not converted)
+    // We need to check the original URL for .ass extension
+    const originalUrl = subtitle.url;
+    if (isASSSubtitle(originalUrl)) {
+      // Use ASS subtitle handler
+      initASSSubtitle(subtitleUrl, subtitleId);
+    } else {
+      // Use native track for VTT/SRT
+      if (videoRef.current) {
         const trackIndex = video.subtitles.findIndex(s => s.id === subtitleId);
+        if (trackIndex !== -1) {
+          const tracks = videoRef.current.textTracks;
+          if (tracks[trackIndex]) {
+            tracks[trackIndex].mode = 'showing';
+          }
+        }
+      }
+    }
+  }, [video.subtitles, destroyJASSUB, initASSSubtitle]);
+
+  // Activate default subtitle when video loads
+  useEffect(() => {
+    if (!videoRef.current) return;
+    
+    const videoElement = videoRef.current;
+    
+    const handleLoadedMetadata = () => {
+      // Find default subtitle from video prop
+      const defaultSubtitle = video.subtitles.find(s => s.is_default);
+      
+      if (defaultSubtitle) {
+        // Set as active subtitle in settings
+        setSettings(prev => ({ ...prev, subtitleId: defaultSubtitle.id }));
+        
+        // Activate the track
+        const tracks = videoElement.textTracks;
+        const trackIndex = video.subtitles.findIndex(s => s.id === defaultSubtitle.id);
         if (trackIndex !== -1 && tracks[trackIndex]) {
           tracks[trackIndex].mode = 'showing';
         }
       }
+    };
+    
+    videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+    
+    // Also check if metadata is already loaded
+    if (videoElement.readyState >= 1) {
+      handleLoadedMetadata();
     }
+    
+    return () => {
+      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
   }, [video.subtitles]);
 
   // Update subtitle positioning based on controls visibility
@@ -711,7 +996,7 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   return (
     <div
       ref={containerRef}
-      className={`video-player ${isFullscreen ? 'fullscreen' : ''} ${showControls ? 'show-controls' : ''}`}
+      className={`video-player ${isFullscreen ? 'fullscreen' : ''} ${showControls ? 'show-controls' : ''} ${isTouchDevice() ? 'touch-device' : ''}`}
       onMouseMove={resetHideTimer}
       onContextMenu={handleContextMenu}
       onClick={handleContainerClick}
@@ -723,16 +1008,24 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
         playsInline
       >
         {/* Subtitles */}
-        {video.subtitles.map((subtitle) => (
-          <track
-            key={subtitle.id}
-            kind="subtitles"
-            label={subtitle.label}
-            srcLang={subtitle.language}
-            src={subtitle.url}
-            default={subtitle.is_default}
-          />
-        ))}
+        {video.subtitles.map((subtitle) => {
+          const subtitleUrl = getSubtitleUrl(subtitle);
+          // For ASS files, use VTT fallback if available
+          const finalUrl = isASSSubtitle(subtitle.url) 
+            ? subtitleUrl.replace(/\.ass$/i, '.vtt') 
+            : subtitleUrl;
+          
+          return (
+            <track
+              key={subtitle.id}
+              kind="subtitles"
+              label={subtitle.label}
+              srcLang={subtitle.language}
+              src={finalUrl}
+              default={subtitle.is_default}
+            />
+          );
+        })}
       </video>
 
       {/* Click Area for Play/Pause and Hold-to-Speed */}
@@ -742,6 +1035,9 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
         onMouseDown={handleVideoAreaMouseDown}
         onMouseUp={handleVideoAreaMouseUp}
         onMouseLeave={handleVideoAreaMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
       />
 
       {/* Speed Boost Indicator */}
@@ -751,6 +1047,21 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
             <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
           </svg>
           <span>2x Speed</span>
+        </div>
+      )}
+
+      {/* Mobile Pause Indicator */}
+      {showMobilePauseIndicator && (
+        <div className="mobile-pause-indicator">
+          {isPlaying ? (
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          )}
         </div>
       )}
 

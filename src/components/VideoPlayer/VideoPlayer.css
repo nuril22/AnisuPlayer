@@ -8,6 +8,8 @@
   overflow: hidden;
   user-select: none;
   aspect-ratio: 16/9;
+  /* Contain subtitles within player */
+  contain: layout style paint;
 }
 
 .video-player.fullscreen {
@@ -17,14 +19,27 @@
 
 /* Video Element */
 .video-element {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: #000;
 }
 
-/* Subtitle Styling - Remove background and position dynamically */
+/* JASSUB Canvas Container - for ASS subtitle rendering */
+.video-player canvas.JASSUB {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+}
+
+/* Subtitle Styling - Remove background and contain within video */
 /* Standard CSS for subtitle cues - works in all browsers */
 .video-element::cue {
   background: transparent !important;
@@ -37,10 +52,10 @@
     0 0 6px rgba(0, 0, 0, 0.9),
     0 0 10px rgba(0, 0, 0, 0.7);
   color: #fff !important;
-  font-size: 1.15em !important;
+  font-size: 1.1em !important;
   font-weight: bold !important;
   font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
-  line-height: 1.5 !important;
+  line-height: 1.4 !important;
   padding: 0 !important;
   margin: 0 !important;
   outline: none !important;
@@ -50,12 +65,17 @@
 
 /* WebKit-specific subtitle styling (Chrome, Safari, Edge) */
 .video-element::-webkit-media-text-track-container {
-  position: relative;
-  z-index: 30 !important; /* Above controls (z-index: 20) */
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  z-index: 4 !important;
   pointer-events: none;
 }
 
-/* Base subtitle display styling */
+/* Base subtitle display styling - keep within video bounds */
 .video-element::-webkit-media-text-track-display {
   background: transparent !important;
   background-color: transparent !important;
@@ -67,32 +87,45 @@
     0 0 6px rgba(0, 0, 0, 0.9),
     0 0 10px rgba(0, 0, 0, 0.7);
   color: #fff !important;
-  font-size: 1.15em !important;
-  font-weight: 500 !important;
-  line-height: 1.5 !important;
-  padding: 0 !important;
+  font-size: 1.1em !important;
+  font-weight: bold !important;
+  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  line-height: 1.4 !important;
+  padding: 2px 8px !important;
   margin: 0 !important;
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
   text-align: center !important;
+  max-width: 90% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
-/* Font for ASS subtitles - apply to all subtitles for now (can be made specific later) */
-.video-element::-webkit-media-text-track-display {
-  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
-  font-weight: bold !important;
+/* Position subtitles above controls when visible */
+.video-player.show-controls .video-element::-webkit-media-text-track-display {
+  transform: translateY(-60px) !important;
+}
+
+.video-element::-webkit-media-text-track-display-backdrop {
+  background: transparent !important;
 }
 
 .video-element::-webkit-media-text-track-region {
   background: transparent !important;
   background-color: transparent !important;
+  overflow: hidden !important;
 }
 
 /* Firefox subtitle styling */
 .video-element::-moz-media-text-track-container {
-  position: relative;
-  z-index: 30 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  z-index: 4 !important;
   pointer-events: none;
 }
 
@@ -108,18 +141,21 @@
     0 0 6px rgba(0, 0, 0, 0.9),
     0 0 10px rgba(0, 0, 0, 0.7);
   color: #fff !important;
-  font-size: 1.15em !important;
-  font-weight: 500 !important;
-  line-height: 1.5 !important;
-  padding: 0 !important;
+  font-size: 1.1em !important;
+  font-weight: bold !important;
+  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  line-height: 1.4 !important;
+  padding: 2px 8px !important;
   margin: 0 !important;
   text-align: center !important;
+  max-width: 90% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
-/* Font for ASS subtitles - apply to all subtitles for now (can be made specific later) */
-.video-element::-moz-media-text-track-display {
-  font-family: 'MADE TOMMY', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
-  font-weight: bold !important;
+/* Position subtitles above controls when visible */
+.video-player.show-controls .video-element::-moz-media-text-track-display {
+  transform: translateY(-60px) !important;
 }
 
 /* Video Click Area - for play/pause on click */
@@ -940,7 +976,6 @@
 /* Speed Sub-menu */
 .context-submenu {
   position: absolute;
-  left: 100%;
   top: 0;
   min-width: 120px;
   background: rgba(20, 20, 30, 0.95);
@@ -950,6 +985,18 @@
   overflow: hidden;
   animation: fadeIn 0.15s ease;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.context-submenu.right {
+  left: 100%;
+  margin-left: 4px;
+}
+
+.context-submenu.left {
+  right: 100%;
+  margin-right: 4px;
 }
 
 .context-submenu-item {
@@ -974,6 +1021,86 @@
 .context-submenu-item .check-icon {
   width: 16px;
   height: 16px;
+}
+
+/* Mobile Pause Indicator */
+.mobile-pause-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  animation: pauseIndicatorPop 0.5s ease forwards;
+  pointer-events: none;
+}
+
+.mobile-pause-indicator svg {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+}
+
+@keyframes pauseIndicatorPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Touch device specific styles */
+.video-player.touch-device .volume-control .volume-slider {
+  display: none;
+}
+
+.video-player.touch-device .big-play-button {
+  width: 70px;
+  height: 70px;
+}
+
+.video-player.touch-device .big-play-button svg {
+  width: 35px;
+  height: 35px;
+}
+
+/* Horizontal fullscreen on mobile */
+.video-player.fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+}
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+  .video-player.fullscreen {
+    transform: rotate(90deg);
+    transform-origin: center center;
+    width: 100vh !important;
+    height: 100vw !important;
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    margin-top: calc(-50vw) !important;
+    margin-left: calc(-50vh) !important;
+  }
 }
 
 /* Responsive */
@@ -1010,6 +1137,19 @@
   .video-info-modal {
     width: 95%;
   }
+  
+  .seek-indicator {
+    width: 30%;
+  }
+  
+  .seek-indicator-content svg {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .seek-indicator-content span {
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1038,6 +1178,16 @@
   
   .quality-indicator {
     display: none;
+  }
+  
+  .mobile-pause-indicator {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .mobile-pause-indicator svg {
+    width: 30px;
+    height: 30px;
   }
 }
 

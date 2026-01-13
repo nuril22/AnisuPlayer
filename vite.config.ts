@@ -29,10 +29,18 @@ export default defineConfig({
       // Note: /cdn route is NOT proxied here
       // React Router handles /cdn/:id page routes
       // API calls from VideoPlayerPage will use full backend URL in development
+    },
+    fs: {
+      // Allow serving files from node_modules for JASSUB worker
+      allow: ['..']
     }
   },
   build: {
     outDir: 'dist',
     sourcemap: true
+  },
+  optimizeDeps: {
+    // Don't pre-bundle JASSUB as it has worker files
+    exclude: ['jassub']
   }
 })

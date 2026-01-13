@@ -6,6 +6,7 @@ import DashboardVideos from './pages/dashboard/DashboardVideos'
 import DashboardUpload from './pages/dashboard/DashboardUpload'
 import DashboardEncoding from './pages/dashboard/DashboardEncoding'
 import DashboardEditVideo from './pages/dashboard/DashboardEditVideo'
+import DashboardSettings from './pages/dashboard/DashboardSettings'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -29,6 +30,7 @@ function App() {
         <Route path="videos/:id/edit" element={<DashboardEditVideo />} />
         <Route path="upload" element={<DashboardUpload />} />
         <Route path="encoding" element={<DashboardEncoding />} />
+        <Route path="settings" element={<DashboardSettings />} />
       </Route>
       
       {/* Default redirect */}
